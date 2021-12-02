@@ -1,4 +1,5 @@
 mod day1;
+mod day2;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -13,6 +14,10 @@ fn main() {
     match day {
         1 => {
             let ans = day1::solve();
+            println!("PART 1:{}\nPART 2:{}", ans.0, ans.1);
+        }
+        2 => {
+            let ans = day2::solve();
             println!("PART 1:{}\nPART 2:{}", ans.0, ans.1);
         }
         _ => {

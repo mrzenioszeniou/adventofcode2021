@@ -1,5 +1,3 @@
-use std::{fs::File, io::Read};
-
 pub fn solve() -> (usize, usize) {
     let steps = parse();
 
@@ -41,14 +39,8 @@ fn part2(steps: &[Move]) -> usize {
 }
 
 fn parse() -> Vec<Move> {
-    let mut content = String::new();
-
-    File::open("res/day2.txt")
+    std::fs::read_to_string("res/day2.txt")
         .unwrap()
-        .read_to_string(&mut content)
-        .unwrap();
-
-    content
         .split('\n')
         .map(|s| {
             let mut split = s.split_ascii_whitespace();

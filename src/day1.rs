@@ -1,5 +1,3 @@
-use std::{fs::File, io::Read};
-
 pub fn solve() -> (usize, usize) {
     let input = parse();
 
@@ -32,14 +30,8 @@ fn part2(depths: &[usize]) -> usize {
 }
 
 fn parse() -> Vec<usize> {
-    let mut content = String::new();
-
-    File::open("res/day1.txt")
+    std::fs::read_to_string("res/day1.txt")
         .unwrap()
-        .read_to_string(&mut content)
-        .unwrap();
-
-    content
         .split_ascii_whitespace()
         .map(|s| s.parse().expect("Could not parse as integer"))
         .collect()

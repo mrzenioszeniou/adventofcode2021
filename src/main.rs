@@ -17,7 +17,7 @@ fn main() {
         2 => print_solution(day2::solve()),
         3 => print_solution(day3::solve()),
         _ => {
-            println!("No implementation available for day {}", day);
+            eprintln!("No implementation available for day {}", day);
             std::process::exit(1);
         }
     }

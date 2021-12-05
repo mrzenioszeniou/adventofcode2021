@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use crate::util::gcd;
+use std::collections::HashMap;
 
 pub fn solve() -> (usize, usize) {
     let lines = parse();

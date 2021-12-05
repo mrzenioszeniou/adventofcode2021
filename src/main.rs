@@ -13,7 +13,12 @@ fn main() {
         std::process::exit(1)
     }
 
-    let day: usize = args[1].parse().expect("Couldn't parse day");
+    let day: usize = if let Ok(day) = args[1].parse() {
+        day
+    } else {
+        eprintln!("Couldn't parse day");
+        std::process::exit(1);
+    };
 
     match day {
         1 => print_solution(day1::solve()),

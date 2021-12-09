@@ -1,3 +1,5 @@
+#![feature(map_first_last)]
+
 mod day1;
 mod day2;
 mod day3;
@@ -6,6 +8,8 @@ mod day5;
 mod day6;
 mod day7;
 mod day8;
+mod day9;
+mod dir;
 mod util;
 
 fn main() {
@@ -32,6 +36,7 @@ fn main() {
         6 => print_solution(day6::solve()),
         7 => print_solution(day7::solve()),
         8 => print_solution(day8::solve()),
+        9 => print_solution(day9::solve()),
         _ => {
             eprintln!("No implementation available for day {}", day);
             std::process::exit(1);

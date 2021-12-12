@@ -3,6 +3,7 @@
 mod day1;
 mod day10;
 mod day11;
+mod day12;
 mod day2;
 mod day3;
 mod day4;
@@ -41,6 +42,7 @@ fn main() {
         9 => print_solution(day9::solve()),
         10 => print_solution(day10::solve()),
         11 => print_solution(day11::solve()),
+        12 => print_solution(day12::solve()),
         _ => {
             eprintln!("No implementation available for day {}", day);
             std::process::exit(1);

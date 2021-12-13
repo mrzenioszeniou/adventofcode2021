@@ -4,6 +4,7 @@ mod day1;
 mod day10;
 mod day11;
 mod day12;
+mod day13;
 mod day2;
 mod day3;
 mod day4;
@@ -43,6 +44,7 @@ fn main() {
         10 => print_solution(day10::solve()),
         11 => print_solution(day11::solve()),
         12 => print_solution(day12::solve()),
+        13 => print_solution(day13::solve()),
         _ => {
             eprintln!("No implementation available for day {}", day);
             std::process::exit(1);
@@ -52,8 +54,8 @@ fn main() {
 
 fn print_solution<A, B>(solution: (A, B))
 where
-    A: std::fmt::Debug + Sized,
-    B: std::fmt::Debug + Sized,
+    A: std::fmt::Display + Sized,
+    B: std::fmt::Display + Sized,
 {
-    println!("PART 1:{:?}\nPART 2:{:?}", solution.0, solution.1);
+    println!("PART 1:{}\nPART 2:{}", solution.0, solution.1);
 }

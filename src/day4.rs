@@ -105,8 +105,7 @@ impl Card {
     pub fn unmarked_sum(&self) -> u32 {
         self.numbers
             .iter()
-            .map(|l| l.iter())
-            .flatten()
+            .flat_map(|l| l.iter())
             .filter(|n| !n.is_marked())
             .map(|n| n.num())
             .sum()

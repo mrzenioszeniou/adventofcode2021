@@ -24,7 +24,6 @@ fn solver(polymer: &[char], pairs: &HashMap<(char, char), char>, steps: usize) -
         let mut next = HashMap::new();
         for (pair, count) in pair_counts.into_iter() {
             if let Some(mid) = pairs.get(&pair) {
-                // println!("Expanding {:?}", pair);
                 next.entry((pair.0, *mid))
                     .and_modify(|cnt| *cnt += count)
                     .or_insert(count);

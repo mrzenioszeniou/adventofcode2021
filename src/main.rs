@@ -1,4 +1,4 @@
-#![feature(map_first_last)]
+#![feature(map_first_last, int_abs_diff)]
 
 mod day1;
 mod day10;
@@ -6,6 +6,7 @@ mod day11;
 mod day12;
 mod day13;
 mod day14;
+mod day15;
 mod day2;
 mod day3;
 mod day4;
@@ -47,6 +48,7 @@ fn main() {
         12 => print_solution(day12::solve()),
         13 => print_solution(day13::solve()),
         14 => print_solution(day14::solve()),
+        15 => print_solution(day15::solve()),
         _ => {
             eprintln!("No implementation available for day {}", day);
             std::process::exit(1);

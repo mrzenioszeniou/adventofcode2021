@@ -43,27 +43,9 @@ impl Packet {
                 1 => subpackets.iter().map(|p| p.value()).product(),
                 2 => subpackets.iter().map(|p| p.value()).min().unwrap(),
                 3 => subpackets.iter().map(|p| p.value()).max().unwrap(),
-                5 => {
-                    if subpackets[0].value() > subpackets[1].value() {
-                        1
-                    } else {
-                        0
-                    }
-                }
-                6 => {
-                    if subpackets[0].value() < subpackets[1].value() {
-                        1
-                    } else {
-                        0
-                    }
-                }
-                7 => {
-                    if subpackets[0].value() == subpackets[1].value() {
-                        1
-                    } else {
-                        0
-                    }
-                }
+                5 => (subpackets[0].value() > subpackets[1].value()).into(),
+                6 => (subpackets[0].value() < subpackets[1].value()).into(),
+                7 => (subpackets[0].value() == subpackets[1].value()).into(),
                 e => panic!("Unexpected operation '{}'", e),
             },
         }
@@ -79,7 +61,7 @@ impl Packet {
     }
 
     pub fn from_bits(bits: &str) -> Option<(Self, usize)> {
-        // 11 is the shortest possible packet which represents a 4-bit value
+        // 11 is the shortest possible packet, which represents a 4-bit value
         if bits.len() < 11 {
             return None;
         }
@@ -177,7 +159,7 @@ mod tests {
         );
 
         assert_eq!(
-            Packet::from_bits("38006F45291200"),
+            Packet::from_hex("38006F45291200"),
             Some((
                 Packet::Operator {
                     version: 1,

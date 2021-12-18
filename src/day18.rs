@@ -32,13 +32,14 @@ fn part2(list: &[String]) -> u32 {
                 continue;
             }
 
-            let mut sequence = format!("[{},{}]", left, right).chars().collect();
-            while explode(&mut sequence) || split(&mut sequence) {}
-            max = std::cmp::max(max, magnitude(&sequence));
-
-            let mut sequence = format!("[{},{}]", right, left).chars().collect();
-            while explode(&mut sequence) || split(&mut sequence) {}
-            max = std::cmp::max(max, magnitude(&sequence));
+            for s in [
+                format!("[{},{}]", left, right),
+                format!("[{},{}]", right, left),
+            ] {
+                let mut sequence = s.chars().collect();
+                while explode(&mut sequence) || split(&mut sequence) {}
+                max = std::cmp::max(max, magnitude(&sequence));
+            }
         }
     }
 

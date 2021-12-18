@@ -1,11 +1,11 @@
-pub fn solve() -> (u32, usize) {
+pub fn solve() -> (u32, u32) {
     let list: Vec<String> = std::fs::read_to_string("res/day18.txt")
         .unwrap()
         .split('\n')
         .map(|l| l.to_string())
         .collect();
 
-    (part1(&list), 42)
+    (part1(&list), part2(&list))
 }
 
 fn part1(list: &[String]) -> u32 {
@@ -16,13 +16,33 @@ fn part1(list: &[String]) -> u32 {
         curr.push(',');
         next.chars().for_each(|c| curr.push(c));
         curr.push(']');
-        print!("Processing {} .. ", String::from_iter(curr.iter()));
 
         while explode(&mut curr) || split(&mut curr) {}
-        println!("OK");
     }
 
     magnitude(&curr)
+}
+
+fn part2(list: &[String]) -> u32 {
+    let mut max = 0;
+
+    for left in list {
+        for right in list {
+            if left == right {
+                continue;
+            }
+
+            let mut sequence = format!("[{},{}]", left, right).chars().collect();
+            while explode(&mut sequence) || split(&mut sequence) {}
+            max = std::cmp::max(max, magnitude(&sequence));
+
+            let mut sequence = format!("[{},{}]", right, left).chars().collect();
+            while explode(&mut sequence) || split(&mut sequence) {}
+            max = std::cmp::max(max, magnitude(&sequence));
+        }
+    }
+
+    max
 }
 
 fn magnitude(sequence: &[char]) -> u32 {
@@ -67,9 +87,7 @@ fn explode(sequence: &mut Vec<char>) -> bool {
     for i in 0..sequence.len() {
         if depth >= 4 {
             if let Some((left, right, n)) = parse_pair(&sequence[i..]) {
-                println!("\n\n{}", String::from_iter(sequence.clone()));
                 sequence.splice(i..i + n, ['0']);
-                println!("{}", String::from_iter(sequence.clone()));
 
                 // Add right
                 for j in i + 1..sequence.len() {
@@ -78,7 +96,6 @@ fn explode(sequence: &mut Vec<char>) -> bool {
                         break;
                     }
                 }
-                println!("{}", String::from_iter(sequence.clone()));
 
                 // Add left
                 for j in (0..i).rev() {
@@ -87,7 +104,6 @@ fn explode(sequence: &mut Vec<char>) -> bool {
                         break;
                     }
                 }
-                println!("{}", String::from_iter(sequence.clone()));
 
                 return true;
             }
@@ -246,5 +262,6 @@ mod tests {
             .collect();
 
         assert_eq!(part1(&list), 4140);
+        assert_eq!(part2(&list), 3993);
     }
 }

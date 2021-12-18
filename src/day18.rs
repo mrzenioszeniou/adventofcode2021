@@ -1,193 +1,141 @@
-use std::{num::ParseIntError, ops::Deref, str::FromStr};
-
 pub fn solve() -> (usize, usize) {
     (42, 42)
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum Number {
-    Value(u32),
-    Pair(Box<Number>, Box<Number>),
+fn split(sequence: &mut Vec<char>) -> bool {
+    for i in 0..sequence.len() - 1 {
+        if let Some((num, n)) = parse_num(&sequence[i..]) {
+            if num > 9 {
+                let left = num.unstable_div_floor(2);
+                let right = num.unstable_div_ceil(2);
+
+                sequence.splice(i..i + n, format!("[{},{}]", left, right).chars());
+
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
-impl Number {
-    pub fn is_value(&self) -> bool {
-        matches!(self, Self::Value(_))
-    }
+fn explode(sequence: &mut Vec<char>) -> bool {
+    let mut depth = 0;
 
-    pub fn magnitude(&self) -> u32 {
-        match self {
-            Self::Value(v) => *v,
-            Self::Pair(left, right) => 3 * left.magnitude() + 2 * right.magnitude(),
-        }
-    }
+    for i in 0..sequence.len() {
+        if depth >= 4 {
+            if let Some((left, right)) = parse_pair(&sequence[i..i + 5]) {
+                println!("\n\n{}", String::from_iter(sequence.clone()));
+                sequence.splice(i..i + 5, ['0']);
+                println!("{}", String::from_iter(sequence.clone()));
 
-    fn add_left(&mut self, n: u32) {
-        match self {
-            Self::Value(v) => *v += n,
-            Self::Pair(left, _) => left.add_left(n),
-        }
-    }
-
-    fn add_right(&mut self, n: u32) {
-        match self {
-            Self::Value(v) => *v += n,
-            Self::Pair(_, right) => right.add_right(n),
-        }
-    }
-
-    pub fn explode(&mut self, depth: usize) -> Option<(Option<u32>, Option<u32>)> {
-        match self {
-            Self::Value(_) => None,
-            Self::Pair(left, right) => {
-                if depth >= 4 && left.is_value() && right.is_value() {
-                    let ret = Some((Some(left.magnitude()), Some(right.magnitude())));
-                    *self = Self::Value(0);
-                    ret
-                } else if let Some((ret_left, ret_right)) = left.explode(depth + 1) {
-                    if ret_right.is_some() && right.is_value() {
-                        *right = Box::new(Self::Value(right.magnitude() + ret_right.unwrap()));
-                        Some((ret_left, None))
-                    } else {
-                        Some((ret_left, ret_right))
+                // Add right
+                for j in i + 1..sequence.len() {
+                    if let Some((num, n)) = parse_num(&sequence[j..]) {
+                        sequence.splice(j..j + n, (num + right).to_string().chars());
+                        break;
                     }
-                } else if let Some((ret_left, ret_right)) = right.explode(depth + 1) {
-                    if ret_left.is_some() && left.is_value() {
-                        *left = Box::new(Self::Value(left.magnitude() + ret_left.unwrap()));
-                        Some((None, ret_right))
-                    } else {
-                        Some((ret_left, ret_right))
-                    }
-                } else {
-                    None
                 }
+                println!("{}", String::from_iter(sequence.clone()));
+
+                // Add left
+                for j in (0..i).rev() {
+                    if let Some((num, n)) = parse_num(&sequence[j..]) {
+                        sequence.splice(j..j + n, (num + left).to_string().chars());
+                        break;
+                    }
+                }
+
+                println!("{}", String::from_iter(sequence.clone()));
+
+                return true;
             }
+        }
+
+        match sequence[i] {
+            '[' => depth += 1,
+            ']' => depth -= 1,
+            _ => {}
         }
     }
+
+    false
 }
 
-impl ToString for Number {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Value(v) => v.to_string(),
-            Self::Pair(l, r) => format!("[{},{}]", l.to_string(), r.to_string()),
-        }
+fn parse_num(from: &[char]) -> Option<(u32, usize)> {
+    let s: String = from.iter().take_while(|c| c.is_numeric()).collect();
+
+    s.parse().ok().map(|num| (num, s.len()))
+}
+
+fn parse_pair(sequence: &[char]) -> Option<(u32, u32)> {
+    if sequence[0] != '[' {
+        return None;
     }
-}
 
-impl FromStr for Number {
-    type Err = ();
+    let (left, n) = parse_num(&sequence[1..])?;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut queue = vec![];
+    if sequence[n + 1] != ',' {
+        return None;
+    }
 
-        for c in s.chars() {
-            if c == '[' || c == ',' {
-                continue;
-            }
+    let (right, m) = parse_num(&sequence[n + 2..])?;
 
-            if c == ']' {
-                let right = Box::new(queue.pop().unwrap());
-                let left = Box::new(queue.pop().unwrap());
-                queue.push(Self::Pair(left, right));
-            } else {
-                let value = c.to_digit(10).unwrap();
-                queue.push(Self::Value(value));
-            }
-        }
-
-        Ok(queue.pop().unwrap())
+    if sequence[n + m + 2] == ']' {
+        Some((left, right))
+    } else {
+        None
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
     fn examples() {
-        assert_eq!("4".parse(), Ok(Number::Value(4)));
+        let mut s = "[[[[[9,8],1],2],3],4]".chars().collect();
+        assert!(explode(&mut s));
+        assert!(s.into_iter().eq("[[[[0,9],2],3],4]".chars()));
+
+        let mut s = "[7,[6,[5,[4,[3,2]]]]]".chars().collect();
+        assert!(explode(&mut s));
+        assert!(s.into_iter().eq("[7,[6,[5,[7,0]]]]".chars()));
+
+        let mut s = "[[6,[5,[4,[3,2]]]],1]".chars().collect();
+        assert!(explode(&mut s));
+        assert!(s.into_iter().eq("[[6,[5,[7,0]]],3]".chars()));
+
+        let mut s = "[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]".chars().collect();
+        assert!(explode(&mut s));
+        assert!(s
+            .into_iter()
+            .eq("[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]".chars()));
+
+        let mut s = "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]".chars().collect();
+        assert!(explode(&mut s));
+        assert!(s.into_iter().eq("[[3,[2,[8,0]]],[9,[5,[7,0]]]]".chars()));
+
+        let mut s = "[[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]".chars().collect();
+        assert!(explode(&mut s));
+        assert_eq!(String::from_iter(&s), "[[[[0,7],4],[7,[[8,4],9]]],[1,1]]");
+
+        assert!(explode(&mut s));
+        assert_eq!(String::from_iter(&s), "[[[[0,7],4],[15,[0,13]]],[1,1]]");
+
+        assert!(!explode(&mut s));
+        assert!(split(&mut s));
+        assert_eq!(String::from_iter(&s), "[[[[0,7],4],[[7,8],[0,13]]],[1,1]]");
+
+        assert!(!explode(&mut s));
+        assert!(split(&mut s));
         assert_eq!(
-            "[1,2]".parse(),
-            Ok(Number::Pair(
-                Box::new(Number::Value(1)),
-                Box::new(Number::Value(2))
-            ))
+            String::from_iter(&s),
+            "[[[[0,7],4],[[7,8],[0,[6,7]]]],[1,1]]"
         );
 
-        assert_eq!(
-            "[[1,2],3]".parse(),
-            Ok(Number::Pair(
-                Box::new(Number::Pair(
-                    Box::new(Number::Value(1)),
-                    Box::new(Number::Value(2))
-                )),
-                Box::new(Number::Value(3))
-            ))
-        );
-
-        assert_eq!(
-            "[9,[8,7]]".parse(),
-            Ok(Number::Pair(
-                Box::new(Number::Value(9)),
-                Box::new(Number::Pair(
-                    Box::new(Number::Value(8)),
-                    Box::new(Number::Value(7))
-                )),
-            ))
-        );
-
-        assert_eq!(
-            "[[1,9],[8,5]]".parse(),
-            Ok(Number::Pair(
-                Box::new(Number::Pair(
-                    Box::new(Number::Value(1)),
-                    Box::new(Number::Value(9))
-                )),
-                Box::new(Number::Pair(
-                    Box::new(Number::Value(8)),
-                    Box::new(Number::Value(5))
-                )),
-            ))
-        );
-
-        assert_eq!(
-            "[[[[[9,8],1],2],3],4]".parse(),
-            Ok(Number::Pair(
-                Box::new(Number::Pair(
-                    Box::new(Number::Pair(
-                        Box::new(Number::Pair(
-                            Box::new(Number::Pair(
-                                Box::new(Number::Value(9)),
-                                Box::new(Number::Value(8))
-                            )),
-                            Box::new(Number::Value(1))
-                        )),
-                        Box::new(Number::Value(2))
-                    )),
-                    Box::new(Number::Value(3))
-                )),
-                Box::new(Number::Value(4))
-            )),
-        );
-
-        let mut n: Number = "[[[[[9,8],1],2],3],4]".parse().unwrap();
-        n.explode(0);
-        assert_eq!(n.to_string(), "[[[[0,9],2],3],4]");
-
-        let mut n: Number = "[7,[6,[5,[4,[3,2]]]]]".parse().unwrap();
-        n.explode(0);
-        assert_eq!(n.to_string(), "[7,[6,[5,[7,0]]]]");
-
-        let mut n: Number = "[[6,[5,[4,[3,2]]]],1]".parse().unwrap();
-        n.explode(0);
-        assert_eq!(n.to_string(), "[[6,[5,[7,0]]],3]");
-
-        // let mut n: Number = "[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]".parse().unwrap();
-        // n.explode(0);
-        // assert_eq!(n.to_string(), "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]");
-
-        // [[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]] becomes [[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]] (the pair [3,2] is unaffected because the pair [7,3] is further to the left; [3,2] would explode on the next action).
-        // [[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]] becomes [[3,[2,[8,0]]],[9,[5,[7,0]]]].
+        assert!(explode(&mut s));
+        assert_eq!(String::from_iter(&s), "[[[[0,7],4],[[7,8],[6,0]]],[8,1]]");
     }
 }

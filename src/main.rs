@@ -1,4 +1,4 @@
-#![feature(map_first_last, int_abs_diff)]
+#![feature(map_first_last, int_abs_diff, int_roundings)]
 
 mod day1;
 mod day10;

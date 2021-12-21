@@ -15,13 +15,10 @@ fn solver(
     enhancements: usize,
 ) -> usize {
     let mut image = image.clone();
-    let mut great_beyond = Edge::new(false);
+    let mut edge = Edge::new(false);
 
     for _ in 0..enhancements {
-        let res = enhance(&image, algorithm, great_beyond);
-
-        image = res.0;
-        great_beyond = res.1;
+        (image, edge) = enhance(&image, algorithm, edge);
     }
 
     image.len()

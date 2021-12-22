@@ -45,56 +45,32 @@ fn part1(steps: &[(Cuboid, bool)]) -> usize {
 }
 
 fn part2(steps: &[(Cuboid, bool)]) -> isize {
-    let mut cubes: HashSet<Cube> = HashSet::from([universe(steps)]);
+    let mut cubes: HashSet<Cube> = HashSet::new();
 
     for (cuboid, on) in steps {
         let new_cube = Cube::new(
             cuboid.0, cuboid.1, cuboid.2, cuboid.3, cuboid.4, cuboid.5, *on,
         )
-        .expect("Invalid cube in inout");
+        .expect("Invalid cube in input");
 
         let mut next = HashSet::new();
-        let mut intersected = false;
 
-        for cube in cubes.iter() {
-            if let Some(split) = cube.intersect(&new_cube) {
-                next.extend(split.into_iter());
-                intersected = true;
+        for cube in cubes.into_iter() {
+            if let Some(pieces) = cube.without(&new_cube) {
+                next.extend(pieces.into_iter());
             } else {
-                next.insert(cube.clone());
+                next.insert(cube);
             }
         }
 
-        assert!(intersected);
+        if *on {
+            next.insert(new_cube);
+        }
 
         cubes = next;
     }
 
-    cubes
-        .into_iter()
-        .filter(|c| c.on)
-        .map(|c| c.volume())
-        .sum::<isize>()
-}
-
-fn universe(steps: &[(Cuboid, bool)]) -> Cube {
-    let mut min_i = isize::MAX;
-    let mut min_j = isize::MAX;
-    let mut min_k = isize::MAX;
-    let mut max_i = isize::MIN;
-    let mut max_j = isize::MIN;
-    let mut max_k = isize::MIN;
-
-    for (cuboid, _) in steps {
-        min_i = std::cmp::min(min_i, cuboid.0);
-        max_i = std::cmp::max(max_i, cuboid.1);
-        min_j = std::cmp::min(min_j, cuboid.2);
-        max_j = std::cmp::max(max_j, cuboid.3);
-        min_k = std::cmp::min(min_k, cuboid.4);
-        max_k = std::cmp::max(max_k, cuboid.5);
-    }
-
-    Cube::new(min_i, max_i, min_j, max_j, min_k, max_k, false).unwrap()
+    cubes.iter().map(|c| c.volume()).sum::<isize>()
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -139,7 +115,7 @@ impl Cube {
             * (self.max_k - self.min_k + 1)
     }
 
-    pub fn intersect(&self, other: &Self) -> Option<Vec<Self>> {
+    pub fn without(&self, other: &Self) -> Option<Vec<Self>> {
         let (min_i, max_i) = self.intersect_dimension(other, |c| (c.min_i, c.max_i))?;
         let (min_j, max_j) = self.intersect_dimension(other, |c| (c.min_j, c.max_j))?;
         let (min_k, max_k) = self.intersect_dimension(other, |c| (c.min_k, c.max_k))?;
@@ -165,13 +141,12 @@ impl Cube {
         for (i, (min_i, max_i)) in i_ranges.into_iter().enumerate() {
             for (j, (min_j, max_j)) in j_ranges.into_iter().enumerate() {
                 for (k, (min_k, max_k)) in k_ranges.into_iter().enumerate() {
-                    let on = if i == 1 && j == 1 && k == 1 {
-                        other.on
-                    } else {
-                        self.on
-                    };
+                    if i == 1 && j == 1 && k == 1 {
+                        continue;
+                    }
 
-                    if let Some(cube) = Self::new(min_i, max_i, min_j, max_j, min_k, max_k, on) {
+                    if let Some(cube) = Self::new(min_i, max_i, min_j, max_j, min_k, max_k, self.on)
+                    {
                         cubes.push(cube);
                     }
                 }
@@ -272,23 +247,23 @@ mod tests {
 
         let big = Cube::new(0, 9, 0, 9, 0, 9, true).unwrap();
         let small = Cube::new(5, 6, 5, 6, 5, 6, false).unwrap();
-        assert_eq!(big.intersect(&small).unwrap().len(), 27);
+        assert_eq!(big.without(&small).unwrap().len(), 26);
 
         let big = Cube::new(0, 9, 0, 9, 0, 9, true).unwrap();
         let small = Cube::new(0, 6, 5, 6, 5, 6, false).unwrap();
-        assert_eq!(big.intersect(&small).unwrap().len(), 18);
+        assert_eq!(big.without(&small).unwrap().len(), 17);
 
         let big = Cube::new(0, 9, 0, 9, 0, 9, true).unwrap();
         let small = Cube::new(-10, 6, 5, 6, 5, 6, false).unwrap();
-        assert_eq!(big.intersect(&small).unwrap().len(), 18);
+        assert_eq!(big.without(&small).unwrap().len(), 17);
 
         let big = Cube::new(0, 9, 0, 9, 0, 9, true).unwrap();
         let small = Cube::new(0, 6, 0, 6, 5, 5, false).unwrap();
-        assert_eq!(big.intersect(&small).unwrap().len(), 12);
+        assert_eq!(big.without(&small).unwrap().len(), 11);
 
         let big = Cube::new(0, 9, 0, 9, 0, 9, true).unwrap();
         let small = Cube::new(0, 6, 0, 6, 0, 6, false).unwrap();
-        assert_eq!(big.intersect(&small).unwrap().len(), 8);
+        assert_eq!(big.without(&small).unwrap().len(), 7);
 
         let input = r#"on x=-5..47,y=-31..22,z=-19..33
         on x=-44..5,y=-27..21,z=-14..35

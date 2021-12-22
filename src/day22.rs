@@ -2,52 +2,33 @@ use std::{collections::HashSet, vec};
 
 type Cuboid = (isize, isize, isize, isize, isize, isize);
 
-pub fn solve() -> (usize, isize) {
+pub fn solve() -> (isize, isize) {
     let steps = parse(&std::fs::read_to_string("res/day22.txt").unwrap());
 
-    (part1(&steps), part2(&steps))
+    (reboot(&steps, true), reboot(&steps, false))
 }
 
-fn part1(steps: &[(Cuboid, bool)]) -> usize {
-    let mut cubes = HashSet::new();
+fn reboot(steps: &[(Cuboid, bool)], init: bool) -> isize {
+    let mut cubes: HashSet<Cube> = HashSet::new();
 
-    for (cuboid, instruction) in steps {
-        if cuboid.0 < -50
-            || cuboid.0 > 50
-            || cuboid.1 < -50
-            || cuboid.1 > 50
-            || cuboid.2 < -50
-            || cuboid.2 > 50
-            || cuboid.3 < -50
-            || cuboid.3 > 50
-            || cuboid.4 < -50
-            || cuboid.4 > 50
-            || cuboid.5 < -50
-            || cuboid.5 > 50
+    for (cuboid, on) in steps {
+        if init
+            && (cuboid.0 < -50
+                || cuboid.0 > 50
+                || cuboid.1 < -50
+                || cuboid.1 > 50
+                || cuboid.2 < -50
+                || cuboid.2 > 50
+                || cuboid.3 < -50
+                || cuboid.3 > 50
+                || cuboid.4 < -50
+                || cuboid.4 > 50
+                || cuboid.5 < -50
+                || cuboid.5 > 50)
         {
             continue;
         }
 
-        for i in cuboid.0..=cuboid.1 {
-            for j in cuboid.2..=cuboid.3 {
-                for k in cuboid.4..=cuboid.5 {
-                    if *instruction {
-                        cubes.insert((i, j, k));
-                    } else {
-                        cubes.remove(&(i, j, k));
-                    }
-                }
-            }
-        }
-    }
-
-    cubes.len()
-}
-
-fn part2(steps: &[(Cuboid, bool)]) -> isize {
-    let mut cubes: HashSet<Cube> = HashSet::new();
-
-    for (cuboid, on) in steps {
         let new_cube = Cube::new(
             cuboid.0, cuboid.1, cuboid.2, cuboid.3, cuboid.4, cuboid.5, *on,
         )
@@ -57,7 +38,9 @@ fn part2(steps: &[(Cuboid, bool)]) -> isize {
 
         for cube in cubes.into_iter() {
             if let Some(pieces) = cube.without(&new_cube) {
-                next.extend(pieces.into_iter());
+                pieces.into_iter().for_each(|c| {
+                    next.insert(c);
+                });
             } else {
                 next.insert(cube);
             }
@@ -217,8 +200,7 @@ mod tests {
             on x=11..13,y=11..13,z=11..13
             off x=9..11,y=9..11,z=9..11
             on x=10..10,y=10..10,z=10..10"#;
-        assert_eq!(part1(&parse(input)), 39);
-        assert_eq!(part2(&parse(input)), 39);
+        assert_eq!(reboot(&parse(input), true), 39);
 
         let input = r#"on x=-20..26,y=-36..17,z=-47..7
         on x=-20..33,y=-21..23,z=-26..28
@@ -242,8 +224,7 @@ mod tests {
         on x=-41..9,y=-7..43,z=-33..15
         on x=-54112..-39298,y=-85059..-49293,z=-27449..7877
         on x=967..23432,y=45373..81175,z=27513..53682"#;
-        assert_eq!(part1(&parse(input)), 590784);
-        assert_eq!(part2(&parse(input)[0..20]), 590784);
+        assert_eq!(reboot(&parse(input), true), 590784);
 
         let big = Cube::new(0, 9, 0, 9, 0, 9, true).unwrap();
         let small = Cube::new(5, 6, 5, 6, 5, 6, false).unwrap();
@@ -325,6 +306,6 @@ mod tests {
         off x=-70369..-16548,y=22648..78696,z=-1892..86821
         on x=-53470..21291,y=-120233..-33476,z=-44150..38147
         off x=-93533..-4276,y=-16170..68771,z=-104985..-24507"#;
-        assert_eq!(part2(&parse(input)), 2758514936282235);
+        assert_eq!(reboot(&parse(input), false), 2758514936282235);
     }
 }

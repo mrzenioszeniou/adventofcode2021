@@ -1,4 +1,6 @@
-use crate::util::a_star;
+use crate::{dir::neighbours_bounded, pf::a_star};
+
+// use crate::util::a_star;
 
 pub fn solve() -> (usize, usize) {
     let map = parse(std::fs::read_to_string("res/day15.txt").unwrap());
@@ -10,11 +12,18 @@ fn part1(map: &[Vec<usize>]) -> usize {
     let start = (0, 0);
     let end = (map.len() - 1, map[0].len() - 1);
 
+    let n = map.len();
+    let m = map[0].len();
+
     let (_, dist) = a_star(
-        map,
         start,
         end,
-        |_, to| map[to.0][to.1],
+        |&curr| {
+            neighbours_bounded(curr, n, m)
+                .into_iter()
+                .map(|next| (next, map[next.0][next.1]))
+                .collect()
+        },
         |pos| end.0.abs_diff(pos.0) + end.1.abs_diff(pos.1),
     )
     .expect("No path found");

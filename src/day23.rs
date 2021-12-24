@@ -1,13 +1,52 @@
+use crate::pf::a_star;
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    slice::SliceIndex,
+    collections::{BTreeMap, HashSet},
+    fmt::{Debug, Display, Write},
 };
 
 pub fn solve() -> (usize, usize) {
-    (42, 42)
+    let start = Situation {
+        caves: BTreeMap::from([
+            (Cave::Left, vec![]),
+            (Cave::AB, vec![]),
+            (Cave::BC, vec![]),
+            (Cave::CD, vec![]),
+            (Cave::Right, vec![]),
+            (Cave::Color(Color::A), vec![Color::D, Color::C]),
+            (Cave::Color(Color::B), vec![Color::D, Color::C]),
+            (Cave::Color(Color::C), vec![Color::B, Color::A]),
+            (Cave::Color(Color::D), vec![Color::A, Color::B]),
+        ]),
+    };
+
+    (part1(start), 42)
 }
 
-#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+fn part1(start: Situation) -> usize {
+    let target = Situation {
+        caves: BTreeMap::from([
+            (Cave::Left, vec![]),
+            (Cave::AB, vec![]),
+            (Cave::BC, vec![]),
+            (Cave::CD, vec![]),
+            (Cave::Right, vec![]),
+            (Cave::Color(Color::A), vec![Color::A, Color::A]),
+            (Cave::Color(Color::B), vec![Color::B, Color::B]),
+            (Cave::Color(Color::C), vec![Color::C, Color::C]),
+            (Cave::Color(Color::D), vec![Color::D, Color::D]),
+        ]),
+    };
+
+    let path = a_star(start, target, |s| s.nexts(), |s| s.heuristic()).unwrap();
+
+    for each in path.0 {
+        println!("{}\n", each);
+    }
+
+    path.1
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 enum Color {
     A,
     B,
@@ -16,15 +55,6 @@ enum Color {
 }
 
 impl Color {
-    pub fn home_j(&self) -> usize {
-        match self {
-            Self::A => 3,
-            Self::B => 5,
-            Self::C => 7,
-            Self::D => 9,
-        }
-    }
-
     pub fn energy(&self) -> usize {
         match self {
             Self::A => 1,
@@ -34,33 +64,47 @@ impl Color {
         }
     }
 
-    pub fn all() -> &'static [Self] {
-        &[Self::A, Self::B, Self::C, Self::D]
+    pub fn to_char(&self) -> char {
+        match self {
+            Self::A => 'A',
+            Self::B => 'B',
+            Self::C => 'C',
+            Self::D => 'D',
+        }
     }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 struct Situation {
-    ab: Option<Color>,
-    bc: Option<Color>,
-    cd: Option<Color>,
-    left: Vec<Color>,
-    right: Vec<Color>,
-    caves: BTreeMap<Color, Vec<Color>>,
+    caves: BTreeMap<Cave, Vec<Color>>,
 }
 
 impl Situation {
     pub fn heuristic(&self) -> usize {
-        Color::all()
+        self.caves
             .iter()
-            .flat_map(|c| {
-                self.caves
-                    .get(c)
-                    .unwrap()
-                    .iter()
-                    .rev()
-                    .enumerate()
-                    .map(|(pos, a)| if *c != *a { a.energy() * (pos + 1) } else { 0 })
+            .map(|(cave, ampipods)| {
+                if let Cave::Color(color) = cave {
+                    ampipods
+                        .iter()
+                        .rev()
+                        .enumerate()
+                        .map(|(pos, a)| {
+                            if *color != *a {
+                                a.energy() * (pos + 1)
+                            } else {
+                                0
+                            }
+                        })
+                        .sum()
+                } else {
+                    ampipods
+                        .iter()
+                        .rev()
+                        .enumerate()
+                        .map(|(pos, a)| a.energy() * (pos + 1))
+                        .sum::<usize>()
+                }
             })
             .sum()
     }
@@ -68,29 +112,207 @@ impl Situation {
     pub fn nexts(&self) -> HashSet<(Self, usize)> {
         let mut ret = HashSet::new();
 
-        // Pop the left cave
-        let mut s = self.clone();
-        if let Some(a) = s.left.pop() {
-            if self.is_clean(&a) {
-                let cave = s.caves.get_mut(&a).unwrap();
+        for (from, from_pods) in self.caves.iter() {
+            for (to, to_pods) in self.caves.iter() {
+                if from != to
+                    && !from_pods.is_empty()
+                    && self.is_clean(to)
+                    && from
+                        .can_move(to)
+                        .map(|i| i.iter().all(|c| self.is_clean(c)))
+                        .unwrap_or(false)
+                {
+                    let from_pos = from.pos();
+                    let to_pos = to.pos();
 
-                let from_i = 1;
-                let from_j = 1 + s.left.len();
-                let to_i = 3 - cave.len();
-                let to_j = a.home_j();
+                    let dist = to_pos.0.abs_diff(from_pos.0) + to_pos.1.abs_diff(from_pos.1)
+                        - to_pods.len()
+                        - (from_pods.len() - 1);
 
-                let energy = (to_i.abs_diff(from_i) + to_j.abs_diff(from_j)) * a.energy();
+                    let mut next = self.clone();
 
-                cave.push(a);
-                ret.insert((s, energy));
+                    let amphipod = next.caves.get_mut(from).unwrap().pop().unwrap();
+
+                    if to.color().map(|c| c != &amphipod).unwrap_or(false) {
+                        continue;
+                    }
+
+                    let energy = dist * amphipod.energy();
+
+                    next.caves.get_mut(to).unwrap().push(amphipod);
+
+                    ret.insert((next, energy));
+                }
             }
         }
 
         ret
     }
 
-    fn is_clean(&self, color: &Color) -> bool {
-        self.caves.get(color).unwrap().iter().all(|a| a == color)
+    pub fn is_clean(&self, cave: &Cave) -> bool {
+        match cave {
+            Cave::Color(c) => self.caves.get(cave).unwrap().iter().all(|a| a == c),
+            c => self.caves.get(c).unwrap().len() < c.capacity(),
+        }
+    }
+}
+
+impl Debug for Situation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("#############\n#")?;
+
+        for i in 0..2 {
+            f.write_char(
+                self.caves
+                    .get(&Cave::Left)
+                    .unwrap()
+                    .get(i)
+                    .map(|c| c.to_char())
+                    .unwrap_or('.'),
+            )?;
+        }
+        f.write_char('.')?;
+        for cave in [Cave::AB, Cave::BC, Cave::CD] {
+            f.write_char(
+                self.caves
+                    .get(&cave)
+                    .unwrap()
+                    .get(0)
+                    .map(|c| c.to_char())
+                    .unwrap_or('.'),
+            )?;
+            f.write_char('.')?;
+        }
+
+        for i in (0..2).rev() {
+            f.write_char(
+                self.caves
+                    .get(&Cave::Right)
+                    .unwrap()
+                    .get(i)
+                    .map(|c| c.to_char())
+                    .unwrap_or('.'),
+            )?;
+        }
+        f.write_str("#\n###")?;
+
+        for color in [Color::A, Color::B, Color::C, Color::D] {
+            f.write_char(
+                self.caves
+                    .get(&Cave::Color(color))
+                    .unwrap()
+                    .get(1)
+                    .map(|c| c.to_char())
+                    .unwrap_or('.'),
+            )?;
+            f.write_char('#')?;
+        }
+        f.write_str("##\n  #")?;
+
+        for color in [Color::A, Color::B, Color::C, Color::D] {
+            f.write_char(
+                self.caves
+                    .get(&Cave::Color(color))
+                    .unwrap()
+                    .get(0)
+                    .map(|c| c.to_char())
+                    .unwrap_or('.'),
+            )?;
+            f.write_char('#')?;
+        }
+        f.write_str("  \n  #########")
+    }
+}
+
+impl Display for Situation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+enum Cave {
+    Left,
+    AB,
+    BC,
+    CD,
+    Right,
+    Color(Color),
+}
+
+impl Cave {
+    pub fn capacity(&self) -> usize {
+        match self {
+            Self::Left => 2,
+            Self::AB => 1,
+            Self::BC => 1,
+            Self::CD => 1,
+            Self::Right => 2,
+            Self::Color(_) => 2,
+        }
+    }
+
+    pub fn pos(&self) -> (usize, usize) {
+        match self {
+            Self::Left => (1, 1),
+            Self::Color(Color::A) => (3, 3),
+            Self::AB => (1, 4),
+            Self::Color(Color::B) => (3, 5),
+            Self::BC => (1, 6),
+            Self::Color(Color::C) => (3, 7),
+            Self::CD => (1, 8),
+            Self::Color(Color::D) => (3, 9),
+            Self::Right => (1, 11),
+        }
+    }
+
+    pub fn color(&self) -> Option<&Color> {
+        match self {
+            Self::Color(c) => Some(c),
+            _ => None,
+        }
+    }
+
+    pub fn can_move(&self, other: &Self) -> Option<Vec<Cave>> {
+        if self.color().is_some() && other.color().is_none() {
+            return other.can_move(self);
+        }
+
+        Some(match (self, other) {
+            (Cave::Left, Cave::Color(Color::A)) => vec![],
+            (Cave::Left, Cave::Color(Color::B)) => vec![Self::AB],
+            (Cave::Left, Cave::Color(Color::C)) => vec![Self::AB, Self::BC],
+            (Cave::Left, Cave::Color(Color::D)) => vec![Self::AB, Self::BC, Self::CD],
+            (Cave::AB, Cave::Color(Color::A)) => vec![],
+            (Cave::AB, Cave::Color(Color::B)) => vec![],
+            (Cave::AB, Cave::Color(Color::C)) => vec![Self::BC],
+            (Cave::AB, Cave::Color(Color::D)) => vec![Self::BC, Self::CD],
+            (Cave::BC, Cave::Color(Color::A)) => vec![Self::AB],
+            (Cave::BC, Cave::Color(Color::B)) => vec![],
+            (Cave::BC, Cave::Color(Color::C)) => vec![],
+            (Cave::BC, Cave::Color(Color::D)) => vec![Self::CD],
+            (Cave::CD, Cave::Color(Color::A)) => vec![Self::AB, Self::BC],
+            (Cave::CD, Cave::Color(Color::B)) => vec![Self::BC],
+            (Cave::CD, Cave::Color(Color::C)) => vec![],
+            (Cave::CD, Cave::Color(Color::D)) => vec![],
+            (Cave::Right, Cave::Color(Color::A)) => vec![Self::AB, Self::BC, Self::CD],
+            (Cave::Right, Cave::Color(Color::B)) => vec![Self::BC, Self::CD],
+            (Cave::Right, Cave::Color(Color::C)) => vec![Self::CD],
+            (Cave::Right, Cave::Color(Color::D)) => vec![],
+            // (Cave::Color(Color::A), Cave::Color(Color::B)) => vec![Self::AB],
+            // (Cave::Color(Color::A), Cave::Color(Color::C)) => vec![Self::AB, Self::BC],
+            // (Cave::Color(Color::A), Cave::Color(Color::D)) => vec![Self::AB, Self::BC, Self::CD],
+            // (Cave::Color(Color::B), Cave::Color(Color::A)) => vec![Self::AB],
+            // (Cave::Color(Color::B), Cave::Color(Color::C)) => vec![Self::BC],
+            // (Cave::Color(Color::B), Cave::Color(Color::D)) => vec![Self::BC, Self::CD],
+            // (Cave::Color(Color::C), Cave::Color(Color::A)) => vec![Self::AB, Self::BC],
+            // (Cave::Color(Color::C), Cave::Color(Color::B)) => vec![Self::BC],
+            // (Cave::Color(Color::C), Cave::Color(Color::D)) => vec![Self::CD],
+            // (Cave::Color(Color::D), Cave::Color(Color::A)) => vec![Self::AB, Self::BC, Self::CD],
+            // (Cave::Color(Color::D), Cave::Color(Color::B)) => vec![Self::BC, Self::CD],
+            // (Cave::Color(Color::D), Cave::Color(Color::C)) => vec![Self::CD],
+            _ => return None,
+        })
     }
 }
 
@@ -100,41 +322,55 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn situation() {
-        assert_eq!(
-            Situation {
-                caves: BTreeMap::from([
-                    (Color::A, vec![Color::A, Color::A]),
-                    (Color::B, vec![Color::B, Color::B]),
-                    (Color::C, vec![Color::C, Color::C]),
-                    (Color::D, vec![Color::D, Color::D]),
-                ]),
-                ab: None,
-                bc: None,
-                cd: None,
-                left: vec![],
-                right: vec![],
-            }
-            .heuristic(),
-            0
-        );
 
-        assert_eq!(
-            Situation {
-                caves: BTreeMap::from([
-                    (Color::A, vec![Color::A, Color::A]),
-                    (Color::B, vec![Color::D, Color::B]),
-                    (Color::C, vec![Color::C, Color::C]),
-                    (Color::D, vec![Color::B, Color::D]),
-                ]),
-                ab: None,
-                bc: None,
-                cd: None,
-                left: vec![],
-                right: vec![],
-            }
-            .heuristic(),
-            Color::D.energy() * 2 + Color::B.energy() * 2,
-        );
+    fn nexts() {
+        let start = Situation {
+            caves: BTreeMap::from([
+                (Cave::Left, vec![Color::A, Color::B]),
+                (Cave::AB, vec![]),
+                (Cave::BC, vec![]),
+                (Cave::CD, vec![]),
+                (Cave::Right, vec![]),
+                (Cave::Color(Color::A), vec![Color::B, Color::A]),
+                (Cave::Color(Color::B), vec![]),
+                (Cave::Color(Color::C), vec![Color::D, Color::C]),
+                (Cave::Color(Color::D), vec![Color::C, Color::D]),
+            ]),
+        };
+
+        println!("START:\n{}\n", start);
+
+        let nexts = start.nexts();
+
+        for (next, cost) in nexts.iter() {
+            println!("Cost:{}", cost);
+            println!("{}\n", next);
+        }
+
+        assert_eq!(nexts.len(), 20);
+    }
+
+    #[test]
+    fn examples() {
+        // #############
+        // #...........#
+        // ###B#C#B#D###
+        //   #A#D#C#A#
+        //   #########
+        let start = Situation {
+            caves: BTreeMap::from([
+                (Cave::Left, vec![]),
+                (Cave::AB, vec![]),
+                (Cave::BC, vec![]),
+                (Cave::CD, vec![]),
+                (Cave::Right, vec![]),
+                (Cave::Color(Color::A), vec![Color::A, Color::B]),
+                (Cave::Color(Color::B), vec![Color::D, Color::C]),
+                (Cave::Color(Color::C), vec![Color::C, Color::B]),
+                (Cave::Color(Color::D), vec![Color::A, Color::D]),
+            ]),
+        };
+
+        assert_eq!(part1(start), 12521);
     }
 }

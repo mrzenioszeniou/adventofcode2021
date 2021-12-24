@@ -7,11 +7,13 @@ use std::{
 pub fn solve() -> (usize, usize) {
     let start = Situation {
         caves: BTreeMap::from([
-            (Cave::Left, vec![]),
+            (Cave::LL, vec![]),
+            (Cave::L, vec![]),
             (Cave::AB, vec![]),
             (Cave::BC, vec![]),
             (Cave::CD, vec![]),
-            (Cave::Right, vec![]),
+            (Cave::R, vec![]),
+            (Cave::RR, vec![]),
             (Cave::Color(Color::A), vec![Color::D, Color::C]),
             (Cave::Color(Color::B), vec![Color::D, Color::C]),
             (Cave::Color(Color::C), vec![Color::B, Color::A]),
@@ -25,11 +27,13 @@ pub fn solve() -> (usize, usize) {
 fn part1(start: Situation) -> usize {
     let target = Situation {
         caves: BTreeMap::from([
-            (Cave::Left, vec![]),
+            (Cave::LL, vec![]),
+            (Cave::L, vec![]),
             (Cave::AB, vec![]),
             (Cave::BC, vec![]),
             (Cave::CD, vec![]),
-            (Cave::Right, vec![]),
+            (Cave::R, vec![]),
+            (Cave::RR, vec![]),
             (Cave::Color(Color::A), vec![Color::A, Color::A]),
             (Cave::Color(Color::B), vec![Color::B, Color::B]),
             (Cave::Color(Color::C), vec![Color::C, Color::C]),
@@ -161,16 +165,22 @@ impl Debug for Situation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("#############\n#")?;
 
-        for i in 0..2 {
-            f.write_char(
-                self.caves
-                    .get(&Cave::Left)
-                    .unwrap()
-                    .get(i)
-                    .map(|c| c.to_char())
-                    .unwrap_or('.'),
-            )?;
-        }
+        f.write_char(
+            self.caves
+                .get(&Cave::LL)
+                .unwrap()
+                .get(0)
+                .map(|c| c.to_char())
+                .unwrap_or('.'),
+        )?;
+        f.write_char(
+            self.caves
+                .get(&Cave::L)
+                .unwrap()
+                .get(0)
+                .map(|c| c.to_char())
+                .unwrap_or('.'),
+        )?;
         f.write_char('.')?;
         for cave in [Cave::AB, Cave::BC, Cave::CD] {
             f.write_char(
@@ -184,16 +194,22 @@ impl Debug for Situation {
             f.write_char('.')?;
         }
 
-        for i in (0..2).rev() {
-            f.write_char(
-                self.caves
-                    .get(&Cave::Right)
-                    .unwrap()
-                    .get(i)
-                    .map(|c| c.to_char())
-                    .unwrap_or('.'),
-            )?;
-        }
+        f.write_char(
+            self.caves
+                .get(&Cave::R)
+                .unwrap()
+                .get(0)
+                .map(|c| c.to_char())
+                .unwrap_or('.'),
+        )?;
+        f.write_char(
+            self.caves
+                .get(&Cave::RR)
+                .unwrap()
+                .get(0)
+                .map(|c| c.to_char())
+                .unwrap_or('.'),
+        )?;
         f.write_str("#\n###")?;
 
         for color in [Color::A, Color::B, Color::C, Color::D] {
@@ -232,29 +248,34 @@ impl Display for Situation {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 enum Cave {
-    Left,
+    L,
+    LL,
     AB,
     BC,
     CD,
-    Right,
+    R,
+    RR,
     Color(Color),
 }
 
 impl Cave {
     pub fn capacity(&self) -> usize {
         match self {
-            Self::Left => 2,
+            Self::LL => 1,
+            Self::L => 1,
             Self::AB => 1,
             Self::BC => 1,
             Self::CD => 1,
-            Self::Right => 2,
+            Self::R => 1,
+            Self::RR => 1,
             Self::Color(_) => 2,
         }
     }
 
     pub fn pos(&self) -> (usize, usize) {
         match self {
-            Self::Left => (1, 1),
+            Self::LL => (1, 1),
+            Self::L => (1, 2),
             Self::Color(Color::A) => (3, 3),
             Self::AB => (1, 4),
             Self::Color(Color::B) => (3, 5),
@@ -262,7 +283,8 @@ impl Cave {
             Self::Color(Color::C) => (3, 7),
             Self::CD => (1, 8),
             Self::Color(Color::D) => (3, 9),
-            Self::Right => (1, 11),
+            Self::R => (1, 10),
+            Self::RR => (1, 11),
         }
     }
 
@@ -279,10 +301,14 @@ impl Cave {
         }
 
         Some(match (self, other) {
-            (Cave::Left, Cave::Color(Color::A)) => vec![],
-            (Cave::Left, Cave::Color(Color::B)) => vec![Self::AB],
-            (Cave::Left, Cave::Color(Color::C)) => vec![Self::AB, Self::BC],
-            (Cave::Left, Cave::Color(Color::D)) => vec![Self::AB, Self::BC, Self::CD],
+            (Cave::LL, Cave::Color(Color::A)) => vec![Self::L],
+            (Cave::LL, Cave::Color(Color::B)) => vec![Self::L, Self::AB],
+            (Cave::LL, Cave::Color(Color::C)) => vec![Self::L, Self::AB, Self::BC],
+            (Cave::LL, Cave::Color(Color::D)) => vec![Self::L, Self::AB, Self::BC, Self::CD],
+            (Cave::L, Cave::Color(Color::A)) => vec![],
+            (Cave::L, Cave::Color(Color::B)) => vec![Self::AB],
+            (Cave::L, Cave::Color(Color::C)) => vec![Self::AB, Self::BC],
+            (Cave::L, Cave::Color(Color::D)) => vec![Self::AB, Self::BC, Self::CD],
             (Cave::AB, Cave::Color(Color::A)) => vec![],
             (Cave::AB, Cave::Color(Color::B)) => vec![],
             (Cave::AB, Cave::Color(Color::C)) => vec![Self::BC],
@@ -295,10 +321,16 @@ impl Cave {
             (Cave::CD, Cave::Color(Color::B)) => vec![Self::BC],
             (Cave::CD, Cave::Color(Color::C)) => vec![],
             (Cave::CD, Cave::Color(Color::D)) => vec![],
-            (Cave::Right, Cave::Color(Color::A)) => vec![Self::AB, Self::BC, Self::CD],
-            (Cave::Right, Cave::Color(Color::B)) => vec![Self::BC, Self::CD],
-            (Cave::Right, Cave::Color(Color::C)) => vec![Self::CD],
-            (Cave::Right, Cave::Color(Color::D)) => vec![],
+
+            (Cave::R, Cave::Color(Color::A)) => vec![Self::AB, Self::BC, Self::CD],
+            (Cave::R, Cave::Color(Color::B)) => vec![Self::BC, Self::CD],
+            (Cave::R, Cave::Color(Color::C)) => vec![Self::CD],
+            (Cave::R, Cave::Color(Color::D)) => vec![],
+
+            (Cave::RR, Cave::Color(Color::A)) => vec![Self::R, Self::AB, Self::BC, Self::CD],
+            (Cave::RR, Cave::Color(Color::B)) => vec![Self::R, Self::BC, Self::CD],
+            (Cave::RR, Cave::Color(Color::C)) => vec![Self::R, Self::CD],
+            (Cave::RR, Cave::Color(Color::D)) => vec![Self::R],
             // (Cave::Color(Color::A), Cave::Color(Color::B)) => vec![Self::AB],
             // (Cave::Color(Color::A), Cave::Color(Color::C)) => vec![Self::AB, Self::BC],
             // (Cave::Color(Color::A), Cave::Color(Color::D)) => vec![Self::AB, Self::BC, Self::CD],
@@ -326,28 +358,21 @@ mod tests {
     fn nexts() {
         let start = Situation {
             caves: BTreeMap::from([
-                (Cave::Left, vec![Color::A, Color::B]),
+                (Cave::LL, vec![]),
+                (Cave::L, vec![]),
                 (Cave::AB, vec![]),
                 (Cave::BC, vec![]),
                 (Cave::CD, vec![]),
-                (Cave::Right, vec![]),
+                (Cave::R, vec![]),
+                (Cave::RR, vec![]),
                 (Cave::Color(Color::A), vec![Color::B, Color::A]),
-                (Cave::Color(Color::B), vec![]),
+                (Cave::Color(Color::B), vec![Color::A, Color::B]),
                 (Cave::Color(Color::C), vec![Color::D, Color::C]),
                 (Cave::Color(Color::D), vec![Color::C, Color::D]),
             ]),
         };
 
-        println!("START:\n{}\n", start);
-
-        let nexts = start.nexts();
-
-        for (next, cost) in nexts.iter() {
-            println!("Cost:{}", cost);
-            println!("{}\n", next);
-        }
-
-        assert_eq!(nexts.len(), 20);
+        assert_eq!(start.nexts().len(), 28);
     }
 
     #[test]
@@ -359,11 +384,13 @@ mod tests {
         //   #########
         let start = Situation {
             caves: BTreeMap::from([
-                (Cave::Left, vec![]),
+                (Cave::LL, vec![]),
+                (Cave::L, vec![]),
                 (Cave::AB, vec![]),
                 (Cave::BC, vec![]),
                 (Cave::CD, vec![]),
-                (Cave::Right, vec![]),
+                (Cave::R, vec![]),
+                (Cave::RR, vec![]),
                 (Cave::Color(Color::A), vec![Color::A, Color::B]),
                 (Cave::Color(Color::B), vec![Color::D, Color::C]),
                 (Cave::Color(Color::C), vec![Color::C, Color::B]),

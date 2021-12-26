@@ -7,65 +7,32 @@ pub fn solve() -> (isize, usize) {
 fn part1(program: &str) -> isize {
     let alu = ALU::new(program);
 
-    search(alu)
-        .unwrap()
-        .into_iter()
-        .rev()
-        .enumerate()
-        .map(|(i, d)| d * 10_isize.pow(i as u32))
-        .sum()
+    let mut input = vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9];
+    loop {
+        println!("{:?}", input);
 
-    // let mut input = vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-    // loop {
-
-    //     for value in
-
-    //     println!("{:?}", input);
-
-    //     let mut alu = alu.clone();
-
-    //     alu.execute(input.clone());
-
-    //     if alu.done() && alu.z == 0 {
-    //         break;
-    //     } else {
-    //         for digit in input.iter_mut() {
-    //             *digit += 1;
-
-    //             if *digit > 9 {
-    //                 *digit = 1;
-    //             } else {
-    //                 break;
-    //             }
-    //         }
-    //     }
-    // }
-    // println!("Min found {:?}", input);
-
-    // let mut max = vec![9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9];
-    // panic!("No solution found");
-}
-
-fn search(alu: ALU) -> Option<Vec<isize>> {
-    println!("{:?}", alu.input);
-    for i in (1..10).rev() {
         let mut alu = alu.clone();
 
-        alu.execute(vec![i]);
+        alu.execute(input.clone());
 
-        if alu.done() {
-            if alu.z == 0 {
-                return Some(vec![i]);
-            } else {
-                return None;
+        if alu.done() && alu.z == 0 {
+            return input
+                .into_iter()
+                .enumerate()
+                .map(|(i, d)| d * 10_isize.pow(i as u32))
+                .sum();
+        } else {
+            for digit in input.iter_mut() {
+                *digit += 1;
+
+                if *digit > 9 {
+                    *digit = 1;
+                } else {
+                    break;
+                }
             }
-        } else if let Some(mut res) = search(alu) {
-            res.push(i);
-            return Some(res);
         }
     }
-
-    None
 }
 
 #[derive(Clone)]

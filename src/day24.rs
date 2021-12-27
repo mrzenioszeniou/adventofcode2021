@@ -7,7 +7,7 @@ pub fn solve() -> (isize, usize) {
 fn part1(program: &str) -> isize {
     let alu = ALU::new(program);
 
-    let mut input = vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9];
+    let mut input = vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
     loop {
         println!("{:?}", input);
 

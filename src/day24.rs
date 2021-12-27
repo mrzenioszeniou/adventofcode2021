@@ -121,10 +121,3 @@ impl ALU {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn examples() {}
-}

@@ -7,32 +7,93 @@ pub fn solve() -> (isize, usize) {
 fn part1(program: &str) -> isize {
     let alu = ALU::new(program);
 
-    let mut input = vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-    loop {
-        println!("{:?}", input);
+    // let mut input = vec![1; 14];
+
+    let mut min = isize::MAX;
+    let mut sol = None;
+
+    let options: Vec<Vec<isize>> = vec![
+        (1..=9).collect(),
+        (1..=9).collect(),
+        (1..=9).collect(),
+        (1..=9).collect(),
+        (1..=9).collect(),
+        vec![5],
+        vec![1],
+        vec![8],
+        vec![1],
+        vec![3],
+        vec![1],
+        (1..=9).collect(),
+        vec![9],
+        vec![9],
+    ];
+
+    let mut indices = vec![0_usize; 14];
+
+    'outer: loop {
+        let input: Vec<isize> = indices
+            .iter()
+            .enumerate()
+            .map(|(d, i)| options[d][*i])
+            .collect();
 
         let mut alu = alu.clone();
 
         alu.execute(input.clone());
 
-        if alu.done() && alu.z == 0 {
-            return input
-                .into_iter()
-                .enumerate()
-                .map(|(i, d)| d * 10_isize.pow(i as u32))
-                .sum();
-        } else {
-            for digit in input.iter_mut() {
-                *digit += 1;
+        // if alu.z < 10_000 {
+        //     println!("{:?} => {}", input, min);
+        // }
 
-                if *digit > 9 {
-                    *digit = 1;
-                } else {
-                    break;
+        if min >= alu.z {
+            min = alu.z;
+            sol = Some(
+                input
+                    .iter()
+                    .enumerate()
+                    .map(|(i, d)| d * 10_isize.pow(i as u32))
+                    .sum(),
+            );
+            println!("{:?} => {}", input, min);
+        }
+
+        // if alu.done() && alu.z == 0 {
+        // solution = Some(
+        //     input
+        //         .into_iter()
+        //         .enumerate()
+        //         .map(|(i, d)| d * 10_isize.pow(i as u32))
+        //         .sum(),
+        // );
+        // } else {
+        for (digit, index) in indices.iter_mut().enumerate() {
+            *index += 1;
+
+            if *index >= options[digit].len() {
+                *index = 0;
+
+                if digit == input.len() - 1 {
+                    break 'outer;
                 }
+            } else {
+                break;
             }
         }
+
+        // for digit in input.iter_mut() {
+        //     *digit += 1;
+
+        //     if *digit > 9 {
+        //         *digit = 1;
+        //     } else {
+        //         break;
+        //     }
+        // }
+        // }
     }
+
+    sol.unwrap()
 }
 
 #[derive(Clone)]

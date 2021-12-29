@@ -1,11 +1,12 @@
+// Extracted from puzzle input
 const CONSTS: [(isize, isize); 14] = [
     (10, 2),  // w0
     (10, 4),  // w1
     (14, 8),  // w2
-    (11, 7),  // w3 🎉 pushing
-    (14, 12), // w4 ✅ pushing 9 + 12  - 14 == 7
-    (-14, 7), // w5 ✅ popping w4 + 12 - 14 == w5 => w4 == w5 + 2
-    (0, 10),  // w6 🎉 popping w3 + 7 + 0 == w6 => w3 == w6 - 7
+    (11, 7),  // w3 🍟 pushing
+    (14, 12), // w4 🍏 pushing
+    (-14, 7), // w5 🍏 popping w4 + 12 - 14 == w5 => w4 == w5 + 2
+    (0, 10),  // w6 🍟 popping w3 + 7 + 0 == w6 => w3 == w6 - 7
     (10, 14), // w7
     (-10, 2), // w8
     (13, 6),  // w9
@@ -15,137 +16,56 @@ const CONSTS: [(isize, isize); 14] = [
     (-2, 11), // w13
 ];
 
-pub fn solve() -> (isize, usize) {
-    // let program = std::fs::read_to_string("res/day24.txt").unwrap();
-
+pub fn solve() -> (isize, isize) {
     (
-        part1()
+        solver(false)
             .into_iter()
             .enumerate()
             .map(|(i, d)| d * 10_isize.pow(i as u32))
             .sum(),
-        42,
+        solver(true)
+            .into_iter()
+            .enumerate()
+            .map(|(i, d)| d * 10_isize.pow(i as u32))
+            .sum(),
     )
 }
 
-// fn part1(program: &str) -> isize {
-//     // let mut input = vec![1; 14];
-
-//     let mut min = isize::MAX;
-//     let mut sol = None;
-
-//     let options: Vec<Vec<isize>> = vec![
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (8..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//         (1..=9).rev().collect(),
-//     ];
-
-//     let mut indices = vec![0_usize; 14];
-
-//     'outer: loop {
-//         let input: Vec<isize> = indices
-//             .iter()
-//             .enumerate()
-//             .map(|(d, i)| options[d][*i])
-//             .collect();
-
-//         // let mut alu = ALU::default();
-//         // alu.execute(program, input.clone());
-//         // let output = alu.z;
-//         let output = execute(&input);
-
-//         if output == 0 {
-//             sol = Some(
-//                 input
-//                     .iter()
-//                     .enumerate()
-//                     .map(|(i, d)| d * 10_isize.pow(i as u32))
-//                     .sum(),
-//             );
-//             min = 0;
-//             break 'outer;
-//         }
-//         // if min >= output {
-//         //     min = output;
-//         //     sol = Some(
-//         //         input
-//         //             .iter()
-//         //             .enumerate()
-//         //             .map(|(i, d)| d * 10_isize.pow(i as u32))
-//         //             .sum(),
-//         //     );
-//         //     println!("{:?} => {}", input, min);
-//         //     if min == 0 {
-//         //         break;
-//         //     }
-//         // }
-
-//         for (digit, index) in indices.iter_mut().enumerate() {
-//             *index += 1;
-
-//             if *index >= options[digit].len() {
-//                 *index = 0;
-
-//                 if digit == input.len() - 1 {
-//                     break 'outer;
-//                 }
-//             } else {
-//                 break;
-//             }
-//         }
-//     }
-
-//     if min == 0 {
-//         sol.unwrap()
-//     } else {
-//         panic!("No solution found");
-//     }
-// }
-
-fn part1() -> Vec<isize> {
+fn solver(smallest: bool) -> Vec<isize> {
     let mut stack = vec![];
-    let mut pairs = vec![];
-    for (i, (left, _)) in CONSTS.into_iter().enumerate() {
-        if left >= 1 {
-            stack.push(i);
-        } else {
-            pairs.push((stack.pop().unwrap(), i));
-        }
-    }
-
     let mut input = vec![0; 14];
-    'pair: for pair in pairs {
-        println!(
-            "⬇ {} {:?} ⬆ {} {:?}",
-            pair.0, CONSTS[pair.0], pair.1, CONSTS[pair.1],
-        );
-        let diff = CONSTS[pair.0].1 + CONSTS[pair.1].0;
 
-        for n in (1..=9).rev() {
-            let counterpart = n - diff;
+    'outer: for (j, (left, _)) in CONSTS.into_iter().enumerate() {
+        if left >= 1 {
+            stack.push(j);
+        } else {
+            let i = stack.pop().unwrap();
+            let pushed = CONSTS[i];
+            let popped = CONSTS[j];
 
-            if let 1..=9 = counterpart {
-                input[pair.0] = counterpart;
-                input[pair.1] = n;
-                continue 'pair;
+            let diff = pushed.1 + popped.0;
+
+            let mut range: Vec<isize> = (1..=9).collect();
+
+            if !smallest {
+                range.reverse();
             }
-        }
 
-        panic!(
-            "Did not find two valid numbers with a difference of {}",
-            diff
-        );
+            for n in range {
+                let counterpart = n - diff;
+
+                if let 1..=9 = counterpart {
+                    input[i] = counterpart;
+                    input[j] = n;
+                    continue 'outer;
+                }
+            }
+
+            panic!(
+                "Did not find two valid numbers with a difference of {}",
+                diff
+            );
+        }
     }
 
     input.reverse();
@@ -220,7 +140,17 @@ mod tests {
     #[test]
     fn examples() {
         let mut alu = ALU::default();
-        alu.execute(&std::fs::read_to_string("res/day24.txt").unwrap(), part1());
+        alu.execute(
+            &std::fs::read_to_string("res/day24.txt").unwrap(),
+            solver(false),
+        );
+        assert_eq!(alu.z, 0);
+
+        let mut alu = ALU::default();
+        alu.execute(
+            &std::fs::read_to_string("res/day24.txt").unwrap(),
+            solver(true),
+        );
         assert_eq!(alu.z, 0);
     }
 }

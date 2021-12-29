@@ -5,28 +5,26 @@ pub fn solve() -> (isize, usize) {
 }
 
 fn part1(program: &str) -> isize {
-    let alu = ALU::new(program);
-
     // let mut input = vec![1; 14];
 
     let mut min = isize::MAX;
     let mut sol = None;
 
     let options: Vec<Vec<isize>> = vec![
-        (1..=9).collect(),
-        (1..=9).collect(),
-        (1..=9).collect(),
-        (1..=9).collect(),
-        (1..=9).collect(),
-        vec![5],
-        vec![1],
-        vec![8],
-        vec![1],
-        vec![3],
-        vec![1],
-        (1..=9).collect(),
-        vec![9],
-        vec![9],
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (8..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
+        (1..=9).rev().collect(),
     ];
 
     let mut indices = vec![0_usize; 14];
@@ -38,16 +36,12 @@ fn part1(program: &str) -> isize {
             .map(|(d, i)| options[d][*i])
             .collect();
 
-        let mut alu = alu.clone();
+        // let mut alu = ALU::default();
+        // alu.execute(program, input.clone());
+        // let output = alu.z;
+        let output = execute(&input);
 
-        alu.execute(input.clone());
-
-        // if alu.z < 10_000 {
-        //     println!("{:?} => {}", input, min);
-        // }
-
-        if min >= alu.z {
-            min = alu.z;
+        if output == 0 {
             sol = Some(
                 input
                     .iter()
@@ -55,18 +49,24 @@ fn part1(program: &str) -> isize {
                     .map(|(i, d)| d * 10_isize.pow(i as u32))
                     .sum(),
             );
-            println!("{:?} => {}", input, min);
+            min = 0;
+            break 'outer;
         }
+        // if min >= output {
+        //     min = output;
+        //     sol = Some(
+        //         input
+        //             .iter()
+        //             .enumerate()
+        //             .map(|(i, d)| d * 10_isize.pow(i as u32))
+        //             .sum(),
+        //     );
+        //     println!("{:?} => {}", input, min);
+        //     if min == 0 {
+        //         break;
+        //     }
+        // }
 
-        // if alu.done() && alu.z == 0 {
-        // solution = Some(
-        //     input
-        //         .into_iter()
-        //         .enumerate()
-        //         .map(|(i, d)| d * 10_isize.pow(i as u32))
-        //         .sum(),
-        // );
-        // } else {
         for (digit, index) in indices.iter_mut().enumerate() {
             *index += 1;
 
@@ -80,54 +80,59 @@ fn part1(program: &str) -> isize {
                 break;
             }
         }
-
-        // for digit in input.iter_mut() {
-        //     *digit += 1;
-
-        //     if *digit > 9 {
-        //         *digit = 1;
-        //     } else {
-        //         break;
-        //     }
-        // }
-        // }
     }
 
-    sol.unwrap()
+    if min == 0 {
+        sol.unwrap()
+    } else {
+        panic!("No solution found");
+    }
 }
 
-#[derive(Clone)]
+fn execute(input: &[isize]) -> isize {
+    const CONSTS: [(isize, isize, isize); 14] = [
+        (1, 10, 2),
+        (1, 10, 4),
+        (1, 14, 8),
+        (1, 11, 7),
+        (1, 14, 12),
+        (26, -14, 7),
+        (26, 0, 10),
+        (1, 10, 14),
+        (26, -10, 2),
+        (1, 13, 6),
+        (26, -12, 8),
+        (26, -3, 11),
+        (26, -11, 5),
+        (26, -2, 11),
+    ];
+
+    assert_eq!(input.len(), CONSTS.len());
+
+    let mut z = 0;
+
+    for ((z_div, x_add, y_add), w) in CONSTS.into_iter().zip(input.iter().rev()) {
+        let x = z % 26 + x_add;
+
+        z /= z_div;
+
+        if x != *w {
+            z = z * 26 + w + y_add;
+        }
+    }
+
+    z
+}
+
+#[derive(Clone, Default)]
 struct ALU {
     w: isize,
     x: isize,
     y: isize,
     z: isize,
-    index: usize,
-    program: Vec<String>,
-    input: Vec<isize>,
 }
 
 impl ALU {
-    pub fn new(from: &str) -> Self {
-        Self {
-            w: 0,
-            x: 0,
-            y: 0,
-            z: 0,
-            index: 0,
-            program: from
-                .split('\n')
-                .map(|s| s.trim().to_string())
-                .filter(|c| !c.is_empty())
-                .collect(),
-            input: vec![],
-        }
-    }
-
-    fn done(&self) -> bool {
-        self.index == self.program.len()
-    }
-
     fn register(&mut self, register: &str) -> &mut isize {
         match register {
             "w" => &mut self.w,
@@ -148,18 +153,15 @@ impl ALU {
         }
     }
 
-    pub fn execute(&mut self, mut input: Vec<isize>) {
-        while self.index < self.program.len() {
-            if let Some(r) = sscanf::scanf!(self.program[self.index], "inp {}", String) {
-                if let Some(input) = input.pop() {
-                    self.input.push(input);
-                    *self.register(&r) = input;
-                } else {
-                    return;
-                }
+    pub fn execute(&mut self, program: &str, mut input: Vec<isize>) {
+        for line in program.split('\n') {
+            let command = line.trim();
+
+            if let Some(r) = sscanf::scanf!(command, "inp {}", String) {
+                *self.register(&r) = input.pop().unwrap();
             } else {
                 let (command, left, right) =
-                    sscanf::scanf!(self.program[self.index], "{} {} {}", String, String, String)
+                    sscanf::scanf!(command, "{} {} {}", String, String, String)
                         .expect("Invalid command");
 
                 match command.as_str() {
@@ -177,8 +179,23 @@ impl ALU {
                     _ => {}
                 }
             }
-
-            self.index += 1;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn examples() {
+        assert_eq!(execute(&[5, 2, 8, 3, 9, 6, 2, 1, 1, 1, 1, 1, 1, 1]), 2167);
+
+        assert_eq!(execute(&[9, 9, 9, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 1]), 56350);
+
+        assert_eq!(
+            execute(&[1, 3, 3, 2, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
+            1465111
+        );
     }
 }

@@ -90,34 +90,36 @@ fn part1(program: &str) -> isize {
 }
 
 fn execute(input: &[isize]) -> isize {
-    const CONSTS: [(isize, isize, isize); 14] = [
-        (1, 10, 2),
-        (1, 10, 4),
-        (1, 14, 8),
-        (1, 11, 7),
-        (1, 14, 12),
-        (26, -14, 7),
-        (26, 0, 10),
-        (1, 10, 14),
-        (26, -10, 2),
-        (1, 13, 6),
-        (26, -12, 8),
-        (26, -3, 11),
-        (26, -11, 5),
-        (26, -2, 11),
+    const CONSTS: [(isize, isize); 14] = [
+        (10, 2),
+        (10, 4),
+        (14, 8),
+        (11, 7),
+        (14, 12),
+        (-14, 7),
+        (0, 10),
+        (10, 14),
+        (-10, 2),
+        (13, 6),
+        (-12, 8),
+        (-3, 11),
+        (-11, 5),
+        (-2, 11),
     ];
 
     assert_eq!(input.len(), CONSTS.len());
 
     let mut z = 0;
 
-    for ((z_div, x_add, y_add), w) in CONSTS.into_iter().zip(input.iter().rev()) {
-        let x = z % 26 + x_add;
+    for ((left, right), w) in CONSTS.into_iter().zip(input.iter().rev()) {
+        let x = z % 26 + left;
 
-        z /= z_div;
+        if left < 1 {
+            z /= 26;
+        }
 
         if x != *w {
-            z = z * 26 + w + y_add;
+            z = z * 26 + w + right;
         }
     }
 
